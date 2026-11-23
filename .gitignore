@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# DSH runtime data
+.dsh-deepseek-atlas/
+official.json
+
+# Local safety reports
+.ppg/
+
+# Development scratch files and backups
+_backup-*
+_patch/
+_patch_*.py
+.dsh-grammar-tmp/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.tmp

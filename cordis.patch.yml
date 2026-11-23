@@ -1,0 +1,3 @@
+- insert:
+    - id: deepseek-atlas
+      name: 'dsh-deepseek-atlas'
