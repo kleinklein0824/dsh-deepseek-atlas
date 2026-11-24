@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rmdir, unlink, writeFile } from 'node:fs/promises';
+import fs, { mkdir, mkdtemp, readFile, rmdir, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -100,4 +100,25 @@ test('unloading during startup does not leave a background sync timer', async (t
   sync.stop();
   await starting;
   assert.equal(timer.mock.callCount(), 0);
+});
+
+test('startup, first snapshot and immediate refresh share one initial cache read', async (t) => {
+  const { dir, file } = await cachedHome(t);
+  const read = fs.readFile.bind(fs);
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const reads = t.mock.method(fs, 'readFile', async (...args) => { await gate; return read(...args); });
+  const sync = createOfficialSync({ dataDir: dir, fetchImpl: async () => new Response(null, { status: 304 }) });
+  t.after(() => sync.stop());
+
+  const start = sync.start();
+  const opening = sync.ensure();
+  const refreshing = sync.refresh(true);
+  const initialReads = reads.mock.callCount();
+  release();
+  const [, , refreshed] = await Promise.all([start, opening, refreshing]);
+
+  assert.equal(initialReads, 1);
+  assert.deepEqual(sync.snapshot(), refreshed);
+  assert.deepEqual(JSON.parse(await read(file, 'utf8')), refreshed);
 });
