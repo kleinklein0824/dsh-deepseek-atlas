@@ -451,8 +451,8 @@ window.__ModuleLoader__.load({
       'v5-pro': '—',
     };
 
-    const OFFICIAL_ENDPOINT = '/dsh-deepseek-atlas/official.json';
-    const OFFICIAL_REFRESH_ENDPOINT = '/dsh-deepseek-atlas/refresh';
+    const OFFICIAL_ENDPOINT = '/api/dsh-deepseek-atlas/official.json';
+    const OFFICIAL_REFRESH_ENDPOINT = '/api/dsh-deepseek-atlas/refresh';
     const OFFICIAL_PAGE_URL = 'https://api-docs.deepseek.com/quick_start/pricing';
     const OFFICIAL_POLL_MS = 10 * 60 * 1000;
     // Explicit archive ↔ official id mapping. Do not let a retired alias make
@@ -4404,17 +4404,18 @@ window.__ModuleLoader__.load({
         source: 'builtin',
         stale: true,
       });
+      const syncUnavailable = syncState.mode === 'unavailable';
       const syncOfficial = useCallback(async (force) => {
         setSyncState((previous) => ({ ...previous, syncing: true }));
-        if (force) {
-          try {
-            await fetch(OFFICIAL_REFRESH_ENDPOINT, { method: 'POST', cache: 'no-store' });
-          } catch (error) {
-            // The snapshot fetch below still gives the latest cached copy.
-          }
-        }
         try {
-          const response = await fetch(`${OFFICIAL_ENDPOINT}?t=${Date.now()}`, { cache: 'no-store' });
+          const response = await fetch(force ? OFFICIAL_REFRESH_ENDPOINT : OFFICIAL_ENDPOINT, {
+            method: force ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store',
+          });
+          if (response.status === 404) {
+            setOfficial(FALLBACK_OFFICIAL);
+            setSyncState({ mode: 'unavailable', syncing: false, error: null, checkedAt: null, source: 'builtin', stale: true });
+            return false;
+          }
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const snapshot = await response.json();
           if (!snapshot || !Array.isArray(snapshot.models) || snapshot.models.length === 0) {
@@ -4433,7 +4434,7 @@ window.__ModuleLoader__.load({
         } catch (error) {
           setSyncState((previous) => ({
             ...previous,
-            mode: 'fallback',
+            mode: previous.source === 'builtin' ? 'fallback' : 'stale',
             syncing: false,
             error: String((error && error.message) || error),
             stale: true,
@@ -4443,6 +4444,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       useEffect(() => {
+        if (syncUnavailable) return;
         let cancelled = false;
         let retryTimer = 0;
         let retryDelay = 15000;
@@ -4466,7 +4468,7 @@ window.__ModuleLoader__.load({
           window.clearTimeout(retryTimer);
           window.clearInterval(timer);
         };
-      }, [syncOfficial]);
+      }, [syncOfficial, syncUnavailable]);
 
       const records = useMemo(() => buildAtlas(groups, state.current, official), [groups, state.current, official]);
       const currentRecord = records.find((record) => record.isCurrent) || null;
@@ -4820,7 +4822,7 @@ window.__ModuleLoader__.load({
           : syncState.mode === 'stale'
             ? '官方缓存'
             : '内置快照';
-      const syncTitle = syncState.error
+      const syncTitle = syncUnavailable ? '当前宿主未提供受保护的同步接口，仍可浏览内置档案。升级或重启 DSH 后重试。' : syncState.error
         ? `最近检查 ${syncTime} · ${syncState.error}`
         : `官方定价页 · 最近检查 ${syncTime} · 每 6 小时检查一次`;
       const syncClass = syncState.syncing ? 'is-busy' : `is-${syncState.mode}`;
@@ -5005,9 +5007,9 @@ window.__ModuleLoader__.load({
               h('button', {
                 type: 'button',
                 className: `dsa-sync ${syncClass}`,
-                disabled: syncState.syncing,
+                disabled: syncState.syncing || syncUnavailable,
                 title: syncTitle,
-                'aria-label': `${syncModeLabel}，${syncTime}，点击立即检查官方定价页`,
+                'aria-label': syncUnavailable ? `${syncModeLabel}，${syncTitle}` : `${syncModeLabel}，${syncTime}，点击立即检查官方定价页`,
                 onClick: () => syncOfficial(true),
               },
                 h('span', { className: 'dsa-sync-dot' }),

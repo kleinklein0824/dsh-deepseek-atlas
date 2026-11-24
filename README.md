@@ -16,7 +16,7 @@
 - **Bento 详情**：集中展示版本、发布日期、上下文、最大输出、参数标注、能力和价格。
 - **模型对比**：开启「对比」后 `Shift + 点击` 第二个模型，底部切换为双栏 Diff。
 - **推理强度切换**：直接复用当前模型目录提供的 `reasoning.efforts`。
-- **官方数据同步**：宿主每 6 小时拉取一次 DeepSeek 官方定价 Markdown，使用 ETag / Last-Modified 条件请求并按 last-known-good 策略缓存。
+- **官方数据同步**：支持 DSH 认证路由的宿主每 6 小时拉取一次 DeepSeek 官方定价 Markdown，使用 ETag / Last-Modified 条件请求并保留最近一次成功的快照。旧宿主仍可浏览内置档案。
 - **响应式布局**：窄屏使用年份、家族筛选与纵向列表；680px 及以下切换为全屏面板。
 - **无需 API Key**：只读取公开文档，不调用模型，不接触账户额度。
 
@@ -106,12 +106,14 @@ dsh plugin add ./dsh-deepseek-atlas
 4. 网络、解析或写入失败时保留上一次成功快照，并标记为 stale。
 5. 客户端打开档案后读取宿主快照，之后每 10 分钟轮询；失败时按 15s、30s、60s 逐步退避到 300s。
 
-宿主路由：
+从 `v1.1.1` 起，读取和刷新都由 DSH 的 `connection.fetch.register` 注册，访问检查由宿主统一执行。网页端使用当前 DSH 会话，桌面端由 DSH 转发请求；插件不读取令牌。不提供该注册接口的宿主不会启动同步或开放备用 HTTP 路由。此时界面显示「内置快照」，仍可浏览周期表、月历和对比；更新并重启 DSH 后再打开档案即可重新检查。
+
+受 DSH 保护的宿主路由：
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| `GET` | `/dsh-deepseek-atlas/official.json` | 读取当前快照 |
-| `POST` | `/dsh-deepseek-atlas/refresh` | 手动刷新，带 15 秒冷却 |
+| `GET` | `/api/dsh-deepseek-atlas/official.json` | 读取当前快照 |
+| `POST` | `/api/dsh-deepseek-atlas/refresh` | 手动刷新并返回快照，带 15 秒冷却 |
 
 缓存文件默认位于：
 
@@ -171,6 +173,7 @@ dsh-deepseek-atlas/
 项目没有构建步骤。提交前至少执行：
 
 ```sh
+npm test
 node --check index.js
 node --check lib/official.js
 node --check client.js

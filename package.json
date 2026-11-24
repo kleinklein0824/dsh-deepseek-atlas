@@ -1,10 +1,13 @@
 {
   "name": "dsh-deepseek-atlas",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "A DeepSeek model almanac for DSH: long-press the model seat to open a 31-day release calendar, with official pricing/model metadata synced from api-docs.deepseek.com.",
   "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
