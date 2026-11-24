@@ -58,8 +58,10 @@
 
 ### 从 GitHub 安装
 
+以下命令以桌面版的 `desktop` 配置为例。先打开一次 DSH 以初始化配置，然后完全退出再执行命令。Web 版请将 `desktop` 换为 `web`，其他配置使用自己的名称。
+
 ```sh
-dsh plugin add https://github.com/kleinklein0824/dsh-deepseek-atlas
+dsh plugin --profile desktop add https://github.com/kleinklein0824/dsh-deepseek-atlas
 ```
 
 安装后请完全退出并重新打开 DSH。DSH 会在应用进程启动时读取插件清单；首次安装或升级宿主侧代码后，单纯刷新页面不会重新加载 `index.js` 与 `lib/official.js`。
@@ -68,7 +70,7 @@ dsh plugin add https://github.com/kleinklein0824/dsh-deepseek-atlas
 
 ```sh
 git clone https://github.com/kleinklein0824/dsh-deepseek-atlas.git
-dsh plugin add ./dsh-deepseek-atlas
+dsh plugin --profile desktop add ./dsh-deepseek-atlas
 ```
 
 本项目没有构建步骤，也没有运行时 npm 依赖。修改 `client.js` 后可刷新页面热验证；修改宿主侧文件后需要重启 DSH。
